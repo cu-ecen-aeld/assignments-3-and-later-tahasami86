@@ -16,6 +16,22 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    if(cmd == NULL)
+        return false;
+
+    int sys_res = system(cmd);
+
+    if (sys_res == -1)
+    {
+        return false;
+    }
+    
+    if (WIFEXITED(sys_res) && (WEXITSTATUS(sys_res) == 0))
+    {
+        printf("\nsystem() terminated normally\n");
+        return true;
+    }
+    
 
     return true;
 }
@@ -59,9 +75,45 @@ bool do_exec(int count, ...)
  *
 */
 
+    int status;
+
+
+    if ((command[0] == NULL))
+    {
+        printf("\n no command entered \n");
+        return false;
+    }
+    
+    fflush(stdout);
+
+    pid_t pid;
+
+    pid = fork();
+
+    if(pid == -1){
+        printf("Failed to Fork");
+        return false;
+    }
+
+    if ((pid == 0))
+    {
+        execv(command[0],command);
+        printf("\nreturn child process \n");
+        _exit(EXIT_FAILURE);
+    }
+
+    else {
+        // int status;
+        if(waitpid(pid,&status,0) == -1){
+            return false;
+        }
+    }
+    
+
+
     va_end(args);
 
-    return true;
+    return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
 /**
@@ -85,6 +137,12 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = command[count];
 
 
+    if ((command[0] == NULL))
+    {
+        return false;
+    }
+    
+    fflush(stdout);
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -93,7 +151,49 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
 */
 
+    int status;
+
+
+    pid_t pid;
+
+
+    int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC , 0644);
+
+    if(fd == -1){
+
+        exit(EXIT_FAILURE);
+    }
+    
+    pid=fork();
+
+    if(pid == -1){
+        return false;
+    }
+
+   
+     /*child Process*/
+    if(pid == 0){
+    
+    if(dup2(fd,STDOUT_FILENO) == -1){
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
+        close(fd);
+        execv(command[0],command);
+        _exit(EXIT_FAILURE);
+    }
+
+    else if(pid > 0){
+        // int status;
+
+        if (waitpid(pid,&status,0) == -1){
+            return false;
+        }
+
+    }
+
     va_end(args);
 
-    return true;
+    return WIFEXITED(status) && (WEXITSTATUS(status) == 0) ;
 }
