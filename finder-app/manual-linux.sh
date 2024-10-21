@@ -12,8 +12,10 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
-CC=/usr/bin/aarch64-linux-gnu-gcc 
-
+TOOLCHAIN_PATH=/home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/bin
+export PATH=${TOOLCHAIN_PATH}:$PATH
+CC=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-gcc
+LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld
 #<< 'commentformultiline'
 if [ $# -lt 1 ]
 then
@@ -39,14 +41,14 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     # TODO: Add your kernel build steps here
 
     #dist clean
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC} mrproper
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}  CC=${CC} mrproper   LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld
     #Building defconfigs
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC} defconfig
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}  CC=${CC} defconfig  LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld
     #Build VMLinux Target
-    make -j12 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC} all
+    make -j12 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}  CC=${CC} all   LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld
     #Build modules and device nodes
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC} modules
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC} dtbs
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}  CC=${CC} modules    LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld  
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}  CC=${CC} dtbs       LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld  
 
 fi
 
