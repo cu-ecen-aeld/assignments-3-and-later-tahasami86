@@ -14,8 +14,8 @@ ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
 TOOLCHAIN_PATH=/home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/bin
 export PATH=${TOOLCHAIN_PATH}:$PATH
-CC=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-gcc
-LD=${TOOLCHAIN_PATH}/aarch64-none-linux-gnu-ld
+CC=${TOOLCHAIN_PATH}
+LD=${TOOLCHAIN_PATH}
 #<< 'commentformultiline'
 if [ $# -lt 1 ]
 then
