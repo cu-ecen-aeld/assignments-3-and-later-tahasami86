@@ -81,14 +81,14 @@ else
     cd busybox
     git checkout ${BUSYBOX_VERSION}
     make distclean
-    make CC=${CC} defconfig 
+    make  defconfig 
 fi
 
 echo "Busybox defconfig and mrproper completed"
 
 # TODO: Make and install busybox
- make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC}
- make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CONFIG_PREFIX=${OUTDIR}/rootfs CC=${CC} install
+ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} 
+ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CONFIG_PREFIX=${OUTDIR}/rootfs  install
 
 echo "Library dependencies"
 echo "the error is after this line"
