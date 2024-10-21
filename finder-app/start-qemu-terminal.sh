@@ -13,7 +13,7 @@ fi
 
 KERNEL_IMAGE=${OUTDIR}/Image
 #KERNEL_IMAGE=/tmp/aeld/linux-stable/arch/arm64/boot/Image
-INITRD_IMAGE=${OUTDIR}/new_init.cpio.gz
+INITRD_IMAGE=${OUTDIR}/initramfs.cpio.gz
 
 if [ ! -e ${KERNEL_IMAGE} ]; then
     echo "Missing kernel image at ${KERNEL_IMAGE}"

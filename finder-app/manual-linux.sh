@@ -74,28 +74,20 @@ git clone git://busybox.net/busybox.git
     cd busybox
     git checkout ${BUSYBOX_VERSION}
     # TODO:  Configure busybox
-    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper  # Ensures a clean build state
-    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig  # Generates default config
     make distclean
     make defconfig
 else
     cd busybox
     git checkout ${BUSYBOX_VERSION}
-    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper  # Ensures a clean build state
-    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig  # Generates default config
     make distclean
     make CC=${CC} defconfig 
 fi
 
 echo "Busybox defconfig and mrproper completed"
 
- echo "Error is before make"
 # TODO: Make and install busybox
  make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CC=${CC}
- echo "Error is before install"
  make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CONFIG_PREFIX=${OUTDIR}/rootfs CC=${CC} install
-
-#commentformultiline
 
 echo "Library dependencies"
 echo "the error is after this line"
@@ -115,41 +107,11 @@ cp /home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch
 # Add library dependencies to rootfs
 SYSROOT_DIR=$(${CROSS_COMPILE}gcc -print-sysroot)
 SYSROOT_DIR=$(realpath $SYSROOT_DIR)
-<< 'multiline'
-
-for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | sed -n "s#.*program interpreter: \(.*\)]#${SYSROOT_DIR}\1#p"); do
-    # Copy each file to the destination directory
-    relative_path="${file#$SYSROOT_DIR}"
-    echo "Copying ${file} to ${OUTDIR}/rootfs/${relative_path}"
-    cp -L "$file" "${OUTDIR}/rootfs/${relative_path}"
-done
-
-for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | sed -n "s#.*Shared library: \[\(.*\)\]#\1#p"); do
-    if [ -f "${SYSROOT_DIR}/lib64/${file}" ]; then
-        file_path="${SYSROOT_DIR}/lib64/${file}"
-    elif [ -f "${SYSROOT_DIR}/lib/${file}" ]; then
-        file_path="${SYSROOT_DIR}/lib/${file}"
-    else
-        echo "Warning: Shared library ${file} not found in lib or lib64"
-        continue
-    fi
-
-    relative_path="${file_path#$SYSROOT_DIR}"
-    echo "Copying ${file_path} to ${OUTDIR}/rootfs/${relative_path}"
-    cp -L "$file_path" "${OUTDIR}/rootfs/${relative_path}"
-done
-multiline
 
 
-
-# TODO: Make device nodes
-#sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null  c 1 3
-#sudo mknod -m 666 ${OUTDIR}/rootfs/dev/console c 5 1
-#sudo mknod -m 666 ${OUTDIR}/rootfs/dev/ttyAMA0 c 204 64
 cd ${OUTDIR}/rootfs
 sudo mknod -m 666 dev/null c 1 3
 sudo mknod -m 600 dev/console c 5 1
-
 
 
 # TODO: Clean and build the writer utility
