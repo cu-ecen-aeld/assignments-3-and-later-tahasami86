@@ -12,7 +12,8 @@ if [ -z "${OUTDIR}" ]; then
 fi
 
 KERNEL_IMAGE=${OUTDIR}/Image
-INITRD_IMAGE=${OUTDIR}/initramfs.cpio.gz
+#KERNEL_IMAGE=/tmp/aeld/linux-stable/arch/arm64/boot/Image
+INITRD_IMAGE=${OUTDIR}/new_init.cpio.gz
 
 if [ ! -e ${KERNEL_IMAGE} ]; then
     echo "Missing kernel image at ${KERNEL_IMAGE}"
@@ -30,3 +31,6 @@ qemu-system-aarch64 -m 256M -M virt -cpu cortex-a53 -nographic -smp 1 -kernel ${
         -chardev stdio,id=char0,mux=on,logfile=${OUTDIR}/serial.log,signal=off \
         -serial chardev:char0 -mon chardev=char0\
         -append "rdinit=/bin/sh" -initrd ${INITRD_IMAGE}
+
+        #        -append "#rdinit=/bin/bash root=1f00" -initrd ${INITRD_IMAGE}
+
