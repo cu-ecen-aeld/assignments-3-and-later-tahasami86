@@ -96,18 +96,34 @@ ${CROSS_COMPILE}readelf -a  ${OUTDIR}/rootfs/bin/busybox | grep "program interpr
 ${CROSS_COMPILE}readelf -a  ${OUTDIR}/rootfs/bin/busybox | grep "Shared library"
 #
 # TODO: Add library dependencies to rootfs
-cp /home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib/ld-linux-aarch64.so.1  ${OUTDIR}/rootfs/lib
 
-cp /home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64
-
-cp /home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libm.so.6  ${OUTDIR}/rootfs/lib64
-
-cp /home/taha/Desktop/arm_GNU_toolchain/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64
-
-
-# Add library dependencies to rootfs
+# sysroot directory for the cross compiler
 SYSROOT_DIR=$(${CROSS_COMPILE}gcc -print-sysroot)
 SYSROOT_DIR=$(realpath $SYSROOT_DIR)
+
+
+# Extract both program interpreter and shared library dependencies using readelf
+for dep in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | \
+            grep -E "program interpreter|Shared library" | \
+            sed -E "s#.*program interpreter: \[?([^]]+)]?#${SYSROOT_DIR}\1#; \
+                    s#.*Shared library: \[([^]]+)]#\1#"); do
+
+    if [[ -f "${SYSROOT_DIR}/lib/$dep" ]]; then
+        full_path="${SYSROOT_DIR}/lib/$dep"
+    elif [[ -f "${SYSROOT_DIR}/lib64/$dep" ]]; then
+        full_path="${SYSROOT_DIR}/lib64/$dep"
+    else
+        echo "Dependency ${dep} not found in sysroot"
+        continue
+    fi
+
+    # Remove the sysroot part from the path to create a relative path
+    relative_path="${full_path#$SYSROOT_DIR}"
+
+    # Copy the file to the destination rootfs directory
+    echo "Copying ${full_path} to ${OUTDIR}/rootfs/${relative_path}"
+    cp -L "$full_path" "${OUTDIR}/rootfs/${relative_path}"
+done
 
 
 cd ${OUTDIR}/rootfs
@@ -116,7 +132,8 @@ sudo mknod -m 600 dev/console c 5 1
 
 
 # TODO: Clean and build the writer utility
-cd /home/taha/Desktop/LInux_specialization/course_1/course_1/assignment-1-tahasami86/finder-app
+#cd /home/taha/Desktop/LInux_specialization/course_1/course_1/assignment-1-tahasami86/finder-app
+cd /home/Taha/linux/course_1/assignments-3-and-later-tahasami86/finder-app
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
 
@@ -127,8 +144,6 @@ cp writer ${OUTDIR}/rootfs/home/
 cd ..
 cp -r finder-app/ ${OUTDIR}/rootfs/home/
 cd finder-app/
-
-sleep 10
 
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
