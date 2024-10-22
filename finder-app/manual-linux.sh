@@ -127,8 +127,6 @@ cd ${FINDER_APP_DIR}
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
 
-file writer
-
 # TODO: Copy the finder related scripts and executables to the /home directory
 #cp writer.o ${OUTDIR}/rootfs/home/
 cp writer ${OUTDIR}/rootfs/home/
