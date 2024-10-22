@@ -102,29 +102,19 @@ SYSROOT_DIR=$(${CROSS_COMPILE}gcc -print-sysroot)
 SYSROOT_DIR=$(realpath $SYSROOT_DIR)
 
 
-# Extract both program interpreter and shared library dependencies using readelf
-for dep in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | \
-            grep -E "program interpreter|Shared library" | \
-            sed -E "s#.*program interpreter: \[?([^]]+)]?#${SYSROOT_DIR}\1#; \
-                    s#.*Shared library: \[([^]]+)]#\1#"); do
-
-    if [[ -f "${SYSROOT_DIR}/lib/$dep" ]]; then
-        full_path="${SYSROOT_DIR}/lib/$dep"
-    elif [[ -f "${SYSROOT_DIR}/lib64/$dep" ]]; then
-        full_path="${SYSROOT_DIR}/lib64/$dep"
-    else
-        echo "Dependency ${dep} not found in sysroot"
-        continue
-    fi
-
-    # Remove the sysroot part from the path to create a relative path
-    relative_path="${full_path#$SYSROOT_DIR}"
-
-    # Copy the file to the destination rootfs directory
-    echo "Copying ${full_path} to ${OUTDIR}/rootfs/${relative_path}"
-    cp -L "$full_path" "${OUTDIR}/rootfs/${relative_path}"
+for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | sed -n "s#.*program interpreter: \(.*\)]#${SYSROOT_DIR}\1#p"); do
+    # Copy each file to the destination directory
+    relative_path="${file#$SYSROOT_DIR}"
+    echo "Copying ${file} to ${OUTDIR}/rootfs/${relative_path}"
+    cp -L "$file" "${OUTDIR}/rootfs/${relative_path}"
 done
 
+for file in $(${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | sed -n "s#.*Shared library: \[\(.*\)\]#${SYSROOT_DIR}/lib64/\1#p"); do
+    # Copy each file to the destination directory
+    relative_path="${file#$SYSROOT_DIR}"
+    echo "Copying ${file} to ${OUTDIR}/rootfs/${relative_path}"
+    cp -L "$file" "${OUTDIR}/rootfs/${relative_path}"
+done
 
 cd ${OUTDIR}/rootfs
 sudo mknod -m 666 dev/null c 1 3
@@ -133,29 +123,26 @@ sudo mknod -m 600 dev/console c 5 1
 
 # TODO: Clean and build the writer utility
 #cd /home/taha/Desktop/LInux_specialization/course_1/course_1/assignment-1-tahasami86/finder-app
-cd /home/Taha/linux/course_1/assignments-3-and-later-tahasami86/finder-app
+cd ${FINDER_APP_DIR}
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
 
 file writer
 
+# TODO: Copy the finder related scripts and executables to the /home directory
 #cp writer.o ${OUTDIR}/rootfs/home/
 cp writer ${OUTDIR}/rootfs/home/
-cd ..
-cp -r finder-app/ ${OUTDIR}/rootfs/home/
-cd finder-app/
-
-# TODO: Copy the finder related scripts and executables to the /home directory
-# on the target rootfs
 cp finder.sh ${OUTDIR}/rootfs/home/
 cp finder-test.sh ${OUTDIR}/rootfs/home/
 cp autorun-qemu.sh ${OUTDIR}/rootfs/home/
-cd ../conf
-cp assignment.txt ${OUTDIR}/rootfs/home/
-cp username.txt ${OUTDIR}/rootfs/home/
+
 cd ..
+cp -r finder-app/ ${OUTDIR}/rootfs/home/
 cp -r conf/  ${OUTDIR}/rootfs/home/
 
+cd conf/
+cp assignment.txt ${OUTDIR}/rootfs/home/
+cp username.txt ${OUTDIR}/rootfs/home/
 
 echo "copy portion completed"
 
