@@ -1,0 +1,20 @@
+CC = $(CROSS_COMPILE)gcc
+CFLAGS = -Wall -Werror 
+TARGET = aesdsocket
+VALGRIND_LOG = valgrind_output.txt
+
+all : $(TARGET)
+
+$(TARGET) : aesdsocket.o
+	$(CC) $(CFLAGS) -o $(TARGET) aesdsocket.o
+
+aesdsocket.o : aesdsocket.c
+	$(CC) $(CFLAGS) -c aesdsocket.c
+
+clean : 
+	rm -f $(TARGET) aesdsocket.o 
+	rm -f valgrind-out.txt
+
+.PHONY : all clean 
+
+
