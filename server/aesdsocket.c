@@ -44,7 +44,6 @@ int main (int argc, char *argv[]){
     char *ipv4_addr;
     int bytes_read_to_send;
 
-    fflush(stdout);
 
     openlog ("aesdsocket",LOG_PID | LOG_PERROR,LOG_USER);
     if ( (server_socket_fd = socket(AF_INET,SOCK_STREAM,0)) == -1 ){
@@ -54,7 +53,7 @@ int main (int argc, char *argv[]){
     }
 
     
-    
+    fflush(stdout);
     signal(SIGINT,signal_handler);
     signal(SIGTERM,signal_handler);
     
@@ -78,7 +77,7 @@ int main (int argc, char *argv[]){
         
     }
 
-    if (argc > 1 && strcmp(argv[1],"-d") == 0)
+    if ((argc == 2 && (strcmp(argv[1],"-d"))) == 0)
     {
         pid_t pid;
         pid = fork();
@@ -103,7 +102,9 @@ int main (int argc, char *argv[]){
             close_everything();
             exit(EXIT_FAILURE);
         }
-
+        open ("/dev/null", O_RDWR); 
+		dup (0); 
+		dup (0);
     }
 
     file_fd = open(FILE_TO_WRITE, O_CREAT | O_RDWR, 0644);
@@ -200,10 +201,7 @@ int main (int argc, char *argv[]){
             syslog(LOG_INFO, "CLosed connection from %s \n",ipv4_addr);
 
             free(send_buffer);
-            free(recv_buffer);  
-            close(client_fd);      
-    
+            free(recv_buffer);
     }
-    close_everything(); 
     return 0;
 }
