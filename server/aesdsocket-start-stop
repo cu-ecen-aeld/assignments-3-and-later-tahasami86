@@ -1,7 +1,7 @@
 #! /bin/sh
 
 NAME=aesdsocket
-STOP_SIGNAL = SIGTERM
+STOP_SIGNAL=SIGTERM
 
 case "$1" in
     start)
