@@ -315,69 +315,6 @@ int main (int argc, char *argv[]){
 
             }
         }
-        // int used_size = 0 ;
-        // char *recv_buffer = calloc(1, BUFFER_SIZE);
-    
-        // if(recv_buffer == NULL){
-
-        //     syslog(LOG_ERR,"Failed to alocate memory \n");
-        //     close_everything();
-        //     exit(EXIT_FAILURE);
-        // }
-        
-
-        // while ((bytes_read = recv(client_fd,recv_buffer + used_size, BUFFER_SIZE, 0)) > 0)
-        // {
-
-        //     used_size += bytes_read ; 
-
-        //     recv_buffer = realloc(recv_buffer, BUFFER_SIZE + used_size);
-
-        //     if (recv_buffer == NULL)
-        //     {
-        //         syslog(LOG_ERR, "Realloc Failed Exiting");
-        //         close_everything();
-        //         free(recv_buffer);
-        //         exit(EXIT_FAILURE);
-        //     }
-
-        //     if (strchr(recv_buffer, '\n'))
-        //         break;
-        // }   
-
-        // if (write(file_fd,recv_buffer,used_size) < 0){
-        //     syslog(LOG_ERR, "writing to file failed \n");
-        //     free(recv_buffer);
-        //     close_everything();
-        //     exit(EXIT_FAILURE);
-        // }
-        //     fsync(file_fd);
-        //     lseek(file_fd, 0, SEEK_SET);
-        
-
-            // char *send_buffer = calloc(1,used_size);
-
-            // if(send_buffer == NULL){
-
-            //     syslog(LOG_ERR , "Failed file sending buffer \n");
-            //     free(recv_buffer);
-            //     close_everything();
-            // }
-
-            // while ((bytes_read_to_send =read(file_fd,send_buffer,used_size)) > 0)
-            // {
-            //     bytes_read_to_send = send(client_fd,send_buffer,bytes_read_to_send,0);
-            //     if (bytes_read_to_send < 0) {
-            //     syslog(LOG_ERR, "Send error");
-            //     close_everything();
-            //     exit(EXIT_FAILURE);
-            // }
-            // }   
-
-            // syslog(LOG_INFO, "CLosed connection from %s \n",ipv4_addr);
-
-    //         free(send_buffer);
-    //         free(recv_buffer);
      }
      // Join timestamp thread on exit
     pthread_join(timestamp_tid, NULL);
