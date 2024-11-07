@@ -1,12 +1,13 @@
-CC = $(CROSS_COMPILE)gcc
-CFLAGS = -Wall -Werror 
-TARGET = aesdsocket
-VALGRIND_LOG = valgrind_output.txt
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -Wall -Werror 
+LDFLAGS ?= -lpthread -lrt
+TARGET ?= aesdsocket
+VALGRIND_LOG := valgrind_output.txt
 
 all : $(TARGET)
 
 $(TARGET) : aesdsocket.o
-	$(CC) $(CFLAGS) -o $(TARGET) aesdsocket.o
+	$(CC) $(CFLAGS) $(LDFLAGS)-o $(TARGET) aesdsocket.o
 
 aesdsocket.o : aesdsocket.c
 	$(CC) $(CFLAGS) -c aesdsocket.c
