@@ -1,7 +1,7 @@
-CC := $(CROSS_COMPILE)gcc
-CFLAGS := -Wall -Werror 
-LDFLAGS := -lpthread -lrt
-TARGET := aesdsocket
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -Wall -Werror 
+LDFLAGS ?= -lpthread -lrt
+TARGET ?= aesdsocket
 VALGRIND_LOG := valgrind_output.txt
 
 all : $(TARGET)
