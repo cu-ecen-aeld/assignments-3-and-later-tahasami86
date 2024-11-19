@@ -21,6 +21,8 @@
 #include <linux/string.h>
 
 #include "aesdchar.h"
+#include "aesd-circular-buffer.h"
+
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -36,7 +38,7 @@ int aesd_open(struct inode *inode, struct file *filp)
      * TODO: handle open
      */
     struct aesd_dev *dev;
-    dev = container_of(inode->i_cdev,struct aesd_device,cdev);
+    dev = container_of(inode->i_cdev,struct aesd_dev,cdev);
 
     filp->private_data = dev ;
     return 0;
@@ -66,12 +68,91 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval = -ENOMEM;
+    ssize_t bytes_not_written = 0;
+    char *new_line = NULL;
+
+
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
      */
+
+
+    struct aesd_dev *dev = NULL;
+
+    dev = (struct aesd_dev *) filp->private_data;
+
+    if (mutex_lock_interruptible(&dev->driver_lock) != 0)
+            return -ERESTARTSYS;
+
+        if(dev->temp_entry.size == 0){
+
+            dev->temp_entry.buffptr = kmalloc(count,GFP_KERNEL);
+            if(dev->temp_entry.buffptr == 0){
+
+                kfree((void *)dev->temp_entry.buffptr);
+                return  -ENOMEM;
+                goto cleanup;
+            }
+        }
+
+        else {
+            dev->temp_entry.buffptr = krealloc(dev->temp_entry.buffptr ,dev->temp_entry.size + count , GFP_KERNEL);
+
+            if(dev->temp_entry.buffptr == 0)
+            {
+
+                kfree((void *)dev->temp_entry.buffptr);
+                return  -ENOMEM;
+                goto cleanup;
+        }
+
+        }
+
+        bytes_not_written =  copy_from_user((void *)(&dev->temp_entry.buffptr[dev->temp_entry.size]),buf,count);
+
+        if(bytes_not_written >= 0){
+
+            	PDEBUG("copy_from_user failed: %ld bytes not written", bytes_not_written);
+
+                retval = count - bytes_not_written ;
+
+        }
+        else{
+
+            retval = count ;
+        }
+
+
+        dev->temp_entry.size += retval ;
+
+
+        new_line =  (char *) memchr(dev->temp_entry.buffptr , '\n',dev->temp_entry.size);
+
+        if(new_line != NULL){
+
+            aesd_circular_buffer_add_entry(&(dev->temp_buffer), &(dev->temp_entry));
+
+            kfree(dev->temp_entry.buffptr); 
+
+            new_line = NULL;
+            dev->temp_entry.buffptr = NULL;
+		    dev->temp_entry.size = 0;
+        }
+
+       
+
+        *f_pos = 0;
+
+    cleanup:
+    mutex_unlock(&dev->driver_lock);
     return retval;
+
+
 }
+
+
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
     .read =     aesd_read,

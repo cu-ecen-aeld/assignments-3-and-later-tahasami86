@@ -126,7 +126,7 @@ void aesd_circular_buffer_free(struct aesd_circular_buffer *buffer)
         if (entry->buffptr != NULL)
         {
             #ifdef __KERNEL__
-                kfree(entry->buffptr);
+               // kfree(entry->buffptr);
             #else 
                 free((char *)entry->buffptr);
             
