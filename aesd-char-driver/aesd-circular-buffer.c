@@ -13,8 +13,10 @@
 #else
 #include <string.h>
 #include <stdio.h>
-#endif
 #include <stdlib.h>
+#include <stdbool.h>
+#endif
+
 #include "aesd-circular-buffer.h"
 
 // /**
@@ -34,13 +36,18 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     * TODO: implement per description
     */
 
+  int16_t cmulative_length ;
+  int16_t max_length ;
+  int16_t index = buffer->out_offs ;
+  int16_t offset = char_offset ;
+
+  cmulative_length = 0;
+
    if(!buffer){
         return NULL;
     }
 
-  int16_t cmulative_length = 0;
-  int16_t index = buffer->out_offs ;
-  int16_t offset = char_offset ;
+  
 
   while (char_offset > cmulative_length)
   {
@@ -52,7 +59,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
         offset += buffer->entry[index].size;
     }
 
-    int16_t max_length = cmulative_length - 1;
+    max_length = cmulative_length - 1;
 
     if((index == buffer->out_offs)&& (char_offset > max_length)){
 
@@ -104,4 +111,30 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
 {
     memset(buffer,0,sizeof(struct aesd_circular_buffer));
+}
+
+
+void aesd_circular_buffer_free(struct aesd_circular_buffer *buffer)
+{
+
+    uint8_t index;
+    struct aesd_buffer_entry *entry;
+
+    AESD_CIRCULAR_BUFFER_FOREACH(entry,buffer,index)
+    {
+
+        if (entry->buffptr != NULL)
+        {
+            #ifdef __KERNEL__
+                kfree(entry->buffptr);
+            #else 
+                free((char *)entry->buffptr);
+            
+            #endif
+
+        }
+
+
+    }
+
 }

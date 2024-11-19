@@ -17,11 +17,14 @@
 #include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
+#include <linux/slab.h>		// kmalloc()
+#include <linux/string.h>
+
 #include "aesdchar.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
-MODULE_AUTHOR("Your Name Here"); /** TODO: fill in your name **/
+MODULE_AUTHOR("tahasami86"); /** TODO: fill in your name **/
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev aesd_device;
@@ -32,6 +35,10 @@ int aesd_open(struct inode *inode, struct file *filp)
     /**
      * TODO: handle open
      */
+    struct aesd_dev *dev;
+    dev = container_of(inode->i_cdev,struct aesd_device,cdev);
+
+    filp->private_data = dev ;
     return 0;
 }
 
@@ -106,6 +113,10 @@ int aesd_init_module(void)
      * TODO: initialize the AESD specific portion of the device
      */
 
+    aesd_circular_buffer_init(&aesd_device.temp_buffer);
+
+    mutex_init(&aesd_device.driver_lock);
+
     result = aesd_setup_cdev(&aesd_device);
 
     if( result ) {
@@ -125,6 +136,7 @@ void aesd_cleanup_module(void)
      * TODO: cleanup AESD specific poritions here as necessary
      */
 
+    aesd_circular_buffer_free(&aesd_device.temp_buffer);
     unregister_chrdev_region(devno, 1);
 }
 
