@@ -73,7 +73,7 @@ void signal_handler(int signo){
     }
 }
 
-
+/*
 void *client_handler(void *args)
 {
     struct thread_info_st *thread_data=(struct thread_info_st *)args;
@@ -172,6 +172,91 @@ void *client_handler(void *args)
             pthread_exit(NULL);
 
 }
+
+*/
+
+
+void *client_handler(void *args)
+{
+    struct thread_info_st *thread_data = (struct thread_info_st *)args;
+    int client_fd = thread_data->client_fd;
+    int file_fd; // Local file descriptor
+    int bytes_read, bytes_read_to_send;
+    int used_size = 0;
+
+    char *recv_buffer = calloc(1, BUFFER_SIZE);
+    if (recv_buffer == NULL) {
+        syslog(LOG_ERR, "Failed to allocate memory");
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+
+    // Receive data from the client
+    while ((!stop_flag) && ((bytes_read = recv(client_fd, recv_buffer + used_size, BUFFER_SIZE, 0)) > 0)) {
+        used_size += bytes_read;
+        if (strchr(recv_buffer, '\n')) break; // End of a packet
+
+        recv_buffer = realloc(recv_buffer, used_size + BUFFER_SIZE);
+        if (recv_buffer == NULL) {
+            syslog(LOG_ERR, "Realloc failed");
+            free(recv_buffer);
+            close(client_fd);
+            pthread_exit(NULL);
+        }
+    }
+
+    if (bytes_read < 0) {
+        syslog(LOG_ERR, "Error receiving data");
+        free(recv_buffer);
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+
+    // Open the file for writing
+    file_fd = open(FILE_TO_WRITE, O_RDWR | O_APPEND);
+    if (file_fd < 0) {
+        syslog(LOG_ERR, "Failed to open file: %s", strerror(errno));
+        free(recv_buffer);
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+
+    pthread_mutex_lock(&file_mutex);
+    if (write(file_fd, recv_buffer, used_size) < 0) {
+        syslog(LOG_ERR, "Failed to write to file");
+        pthread_mutex_unlock(&file_mutex);
+        close(file_fd);
+        free(recv_buffer);
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+    pthread_mutex_unlock(&file_mutex);
+
+    // Read the file and send it back to the client
+    lseek(file_fd, 0, SEEK_SET);
+    char *send_buffer = malloc(BUFFER_SIZE);
+    if (send_buffer == NULL) {
+        syslog(LOG_ERR, "Failed to allocate send buffer");
+        close(file_fd);
+        free(recv_buffer);
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+
+    while ((bytes_read_to_send = read(file_fd, send_buffer, BUFFER_SIZE)) > 0) {
+        if (send(client_fd, send_buffer, bytes_read_to_send, 0) < 0) {
+            syslog(LOG_ERR, "Failed to send data");
+            break;
+        }
+    }
+
+    free(recv_buffer);
+    free(send_buffer);
+    close(file_fd); // Close file descriptor after use
+    close(client_fd);
+    pthread_exit(NULL);
+}
+
 
 #ifndef USE_AESD_CHAR_DEVICE
 // Thread function to periodically append timestamp
