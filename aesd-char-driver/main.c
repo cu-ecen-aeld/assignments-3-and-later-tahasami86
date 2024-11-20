@@ -111,82 +111,67 @@ return retval;
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = -ENOMEM;
-    ssize_t bytes_not_written = 0;
-    char *new_line = NULL;
+    struct aesd_dev *dev = (struct aesd_dev *)filp->private_data;
+    ssize_t bytes_written = 0, retval = 0;
+    const char *newline_ptr = NULL;
 
+    PDEBUG("write %zu bytes with offset %lld", count, *f_pos);
 
-    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
      */
 
+    if (mutex_lock_interruptible(&dev->driver_lock))
+        return -ERESTARTSYS;
 
-    struct aesd_dev *dev = NULL;
-
-    dev = (struct aesd_dev *) filp->private_data;
-
-    if (mutex_lock_interruptible(&dev->driver_lock) != 0)
-            return -ERESTARTSYS;
-
-        if(dev->temp_entry.size == 0){
-
-            dev->temp_entry.buffptr = kmalloc(count,GFP_KERNEL);
-            if(dev->temp_entry.buffptr == 0){
-
-                kfree((void *)dev->temp_entry.buffptr);
-                return  -ENOMEM;
-                goto cleanup;
-            }
+    // Allocate or expand the temporary buffer
+    if (!dev->temp_entry.buffptr) {
+        dev->temp_entry.buffptr = kmalloc(count, GFP_KERNEL);
+        if (!dev->temp_entry.buffptr) {
+            retval = -ENOMEM;
+            goto cleanup;
         }
-
-        else {
-            dev->temp_entry.buffptr = krealloc(dev->temp_entry.buffptr ,dev->temp_entry.size + count , GFP_KERNEL);
-
-            if(dev->temp_entry.buffptr == 0)
-            {
-
-                kfree((void *)dev->temp_entry.buffptr);
-                return  -ENOMEM;
-                goto cleanup;
+        dev->temp_entry.size = 0;
+    } else {
+        char *new_buffptr = krealloc(dev->temp_entry.buffptr, dev->temp_entry.size + count, GFP_KERNEL);
+        if (!new_buffptr) {
+            retval = -ENOMEM;
+            goto cleanup;
         }
+        dev->temp_entry.buffptr = new_buffptr;
+    }
 
-        }
+    // Copy data from user space to the temporary buffer
+    bytes_written = count - copy_from_user((void *)(&dev->temp_entry.buffptr[dev->temp_entry.size]), buf, count);
+    dev->temp_entry.size += bytes_written;
 
-        bytes_not_written =  copy_from_user((void *)(&dev->temp_entry.buffptr[dev->temp_entry.size]),buf,count);
+    // Check if the newline character is present
+    newline_ptr = memchr(dev->temp_entry.buffptr, '\n', dev->temp_entry.size);
+    while (newline_ptr) {
+        size_t line_length = newline_ptr - dev->temp_entry.buffptr + 1;
 
-        if(bytes_not_written >= 0){
+        // Create a new entry for the line and add it to the buffer
+        struct aesd_buffer_entry new_entry = {
+            .buffptr = dev->temp_entry.buffptr,
+            .size = line_length,
+        };
+        aesd_circular_buffer_add_entry(&dev->temp_buffer, &new_entry);
 
-            	PDEBUG("copy_from_user failed: %ld bytes not written", bytes_not_written);
-
-                retval = count - bytes_not_written ;
-
-        }
-        else{
-
-            retval = count ;
-        }
-
-
-        dev->temp_entry.size += retval ;
-
-
-        new_line =  (char *) memchr(dev->temp_entry.buffptr , '\n',dev->temp_entry.size);
-
-        if(new_line != NULL){
-
-            aesd_circular_buffer_add_entry(&(dev->temp_buffer), &(dev->temp_entry));
-
-            kfree(dev->temp_entry.buffptr); 
-
-            new_line = NULL;
+        // Adjust temp_entry for remaining data
+        size_t remaining_size = dev->temp_entry.size - line_length;
+        if (remaining_size > 0) {
+            memmove(dev->temp_entry.buffptr, dev->temp_entry.buffptr + line_length, remaining_size);
+            dev->temp_entry.size = remaining_size;
+        } else {
             dev->temp_entry.buffptr = NULL;
-		    dev->temp_entry.size = 0;
+            dev->temp_entry.size = 0;
         }
 
-       
+        // Look for another newline in the remaining data
+        newline_ptr = memchr(dev->temp_entry.buffptr, '\n', dev->temp_entry.size);
+    }
 
-        *f_pos = 0;
+    retval = bytes_written;
 
     cleanup:
     mutex_unlock(&dev->driver_lock);
