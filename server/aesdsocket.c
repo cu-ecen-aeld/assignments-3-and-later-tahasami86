@@ -349,30 +349,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -443,10 +419,6 @@ void signal_handler(int signo) {
 
 void *client_handler(void *args) {
     struct thread_info_st *thread_data = (struct thread_info_st *)args;
-/*
-void *client_handler(void *args)
-{
-    struct thread_info_st *thread_data=(struct thread_info_st *)args;
     int client_fd = thread_data->client_fd;
     int bytes_read, bytes_to_send;
     int used_size = 0;
@@ -586,3 +558,27 @@ int main(int argc, char *argv[]) {
     close_everything();
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
