@@ -130,6 +130,34 @@ void *client_handler(void *args) {
     pthread_exit(NULL);
 }
 
+
+#ifndef USE_AESD_CHAR_DEVICE
+// Thread function to periodically append timestamp
+void *timestamp_thread(void *arg) {
+    while (!stop_flag) {
+        pthread_mutex_lock(&file_mutex);
+
+        // Get current time
+        time_t now = time(NULL);
+        struct tm *time_info = localtime(&now);
+        char time_str[BUFFER_SIZE];
+        strftime(time_str, sizeof(time_str), "timestamp:%a, %d %b %Y %H:%M:%S\n", time_info);
+
+        // Write timestamp to file
+        lseek(file_fd, 0, SEEK_END);
+        write(file_fd, time_str, strlen(time_str));
+
+        pthread_mutex_unlock(&file_mutex);
+
+        // Sleep for 10 seconds, checking stop_flag during sleep
+        for (int i = 0; i < 10 && !stop_flag; i++) {
+            sleep(1);
+        }
+    }
+    pthread_exit(NULL);
+}
+#endif
+
 int main(int argc, char *argv[]) {
     struct sockaddr_in server_addr = {0};
     struct sockaddr_in client_addr = {0};
@@ -166,11 +194,50 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    if ((argc == 2 && (strcmp(argv[1],"-d"))) == 0)
+    {
+        pid_t pid;
+        pid = fork();
+
+        if (pid < 0){
+            syslog(LOG_ERR,"Fork Failed \n");
+            close_everything();
+            exit(EXIT_FAILURE);
+        }
+
+        if(pid > 0){
+            exit(EXIT_SUCCESS);
+        }
+
+        if (setsid() == -1) {
+            syslog(LOG_ERR, "setsid error");
+            close_everything();
+            exit(EXIT_FAILURE);
+        }
+        if (chdir("/") == -1) {
+            syslog(LOG_ERR, "chdir error");
+            close_everything();
+            exit(EXIT_FAILURE);
+        }
+        open ("/dev/null", O_RDWR); 
+		dup (0); 
+		dup (0);
+    }
+
     if (listen(server_socket_fd, CONNECTION) < 0) {
         syslog(LOG_ERR, "Listening failed");
         close_everything();
         exit(EXIT_FAILURE);
     }
+
+
+#ifndef USE_AESD_CHAR_DEVICE
+
+    // Start timestamp thread
+    pthread_t timestamp_tid;
+    pthread_create(&timestamp_tid, NULL, timestamp_thread, NULL);
+#endif
+
 
     while (1) {
         socklen_t client_addr_len = sizeof(client_addr);
