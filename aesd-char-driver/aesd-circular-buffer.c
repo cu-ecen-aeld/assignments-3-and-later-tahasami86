@@ -10,6 +10,7 @@
 
 #ifdef __KERNEL__
 #include <linux/string.h>
+#include <linux/slab.h> // For kfree and kmalloc
 #else
 #include <string.h>
 #include <stdio.h>
@@ -126,7 +127,7 @@ void aesd_circular_buffer_free(struct aesd_circular_buffer *buffer)
         if (entry->buffptr != NULL)
         {
             #ifdef __KERNEL__
-               // kfree(entry->buffptr);
+               kfree(entry->buffptr);
             #else 
                 free((char *)entry->buffptr);
             

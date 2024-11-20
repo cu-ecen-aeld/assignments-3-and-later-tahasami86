@@ -16,9 +16,18 @@
 #include <stdbool.h>
 #include <sys/queue.h>
 
+#define USE_AESD_CHAR_DEVICE 1
+
+#ifdef USE_AESD_CHAR_DEVICE
+#define FILE_TO_WRITE "/dev/aesdchar"
+
+#else
+#define FILE_TO_WRITE "/var/tmp/aesdsocketdata"
+#endif
+
+
 #define PORT 9000
 #define CONNECTION 3
-#define FILE_TO_WRITE "/var/tmp/aesdsocketdata"
 #define BUFFER_SIZE 1024
 #define BEGIN 0
 
@@ -42,7 +51,9 @@ TAILQ_HEAD(tailqhead, thread_info_st) queue_head;
 void close_everything(void){
         syslog(LOG_ERR,"Caught signal, exiting");
         close(server_socket_fd);
+#if !USE_AESD_CHAR_DEVICE
         remove(FILE_TO_WRITE);
+#endif
         pthread_mutex_destroy(&file_mutex); // Destroy the mutex
         closelog();
 }
@@ -162,6 +173,7 @@ void *client_handler(void *args)
 
 }
 
+#if !USE_AESD_CHAR_DEVICE
 // Thread function to periodically append timestamp
 void *timestamp_thread(void *arg) {
     while (!stop_flag) {
@@ -186,6 +198,9 @@ void *timestamp_thread(void *arg) {
     }
     pthread_exit(NULL);
 }
+#endif
+
+
 int main (int argc, char *argv[]){
     //FILE *file;
     struct sockaddr_in server_addr = {0};
@@ -277,9 +292,12 @@ int main (int argc, char *argv[]){
         return -1;
     }
 
+#if !USE_AESD_CHAR_DEVICE
+
     // Start timestamp thread
     pthread_t timestamp_tid;
     pthread_create(&timestamp_tid, NULL, timestamp_thread, NULL);
+#endif
 
     while (1)
     {
@@ -316,8 +334,12 @@ int main (int argc, char *argv[]){
             }
         }
      }
+
+#if !USE_AESD_CHAR_DEVICE
      // Join timestamp thread on exit
     pthread_join(timestamp_tid, NULL);
+#endif
+
     pthread_mutex_destroy(&file_mutex);
     close_everything();
     return 0;

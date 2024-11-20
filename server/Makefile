@@ -7,7 +7,7 @@ VALGRIND_LOG := valgrind_output.txt
 all : $(TARGET)
 
 $(TARGET) : aesdsocket.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) aesdsocket.o
+	$(CC) $(CFLAGS) -o $(TARGET) aesdsocket.o $(LDFLAGS)
 
 aesdsocket.o : aesdsocket.c
 	$(CC) $(CFLAGS) -c aesdsocket.c
