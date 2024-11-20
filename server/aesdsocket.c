@@ -51,7 +51,7 @@ TAILQ_HEAD(tailqhead, thread_info_st) queue_head;
 void close_everything(void){
         syslog(LOG_ERR,"Caught signal, exiting");
         close(server_socket_fd);
-#if !USE_AESD_CHAR_DEVICE
+#ifndef  USE_AESD_CHAR_DEVICE
         remove(FILE_TO_WRITE);
 #endif
         pthread_mutex_destroy(&file_mutex); // Destroy the mutex
@@ -173,7 +173,7 @@ void *client_handler(void *args)
 
 }
 
-#if !USE_AESD_CHAR_DEVICE
+#ifndef USE_AESD_CHAR_DEVICE
 // Thread function to periodically append timestamp
 void *timestamp_thread(void *arg) {
     while (!stop_flag) {
@@ -292,7 +292,7 @@ int main (int argc, char *argv[]){
         return -1;
     }
 
-#if !USE_AESD_CHAR_DEVICE
+#ifndef USE_AESD_CHAR_DEVICE
 
     // Start timestamp thread
     pthread_t timestamp_tid;
@@ -335,7 +335,7 @@ int main (int argc, char *argv[]){
         }
      }
 
-#if !USE_AESD_CHAR_DEVICE
+#ifndef USE_AESD_CHAR_DEVICE
      // Join timestamp thread on exit
     pthread_join(timestamp_tid, NULL);
 #endif
