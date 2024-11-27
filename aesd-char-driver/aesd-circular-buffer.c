@@ -33,47 +33,46 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    /**
-    * TODO: implement per description
-    */
+    size_t offset_size = 0;
+    size_t entry_idx = 0;
+    int check_entries = 0;
+    struct aesd_buffer_entry* p_entry = NULL;
 
-  int16_t cmulative_length ;
-  int16_t max_length ;
-  int16_t index = buffer->out_offs ;
-  int16_t offset = char_offset ;
-
-  cmulative_length = 0;
-
-   if(!buffer){
+    // If buffer is NULL, return NULL
+    if (buffer == NULL) {
         return NULL;
     }
 
+    entry_idx = buffer->out_offs;
+
   
 
-  while (char_offset > cmulative_length)
-  {
-    cmulative_length += buffer->entry[index].size;
-    index = (index + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED ;
-    offset = char_offset - cmulative_length ;
+    // Walk through buffer until offset is reached
+    while (check_entries < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED ) {
 
-    if(offset < 0){
-        offset += buffer->entry[index].size;
+        p_entry = &(buffer->entry[entry_idx]);
+
+        if (char_offset < offset_size + p_entry->size){
+
+            *entry_offset_byte_rtn = char_offset - offset_size ;
+            return p_entry;
+        }
+
+        offset_size += p_entry->size;
+        entry_idx = (entry_idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+        check_entries++;
+
+        if(entry_idx == buffer->out_offs){
+
+            break;
+        }
+        
     }
 
-    max_length = cmulative_length - 1;
 
-    if((index == buffer->out_offs)&& (char_offset > max_length)){
-
-        return NULL;
-
-    }
-  }
-
-  *entry_offset_byte_rtn = offset ;
-    return &(buffer->entry[index]);
-  
+    return NULL;
 }
-
 
 
 /**
