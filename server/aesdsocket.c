@@ -67,6 +67,7 @@ void signal_handler(int signo) {
     }
 }
 
+/*
 void *client_handler(void *args) {
     struct thread_info_st *thread_data = (struct thread_info_st *)args;
     int client_fd = thread_data->client_fd;
@@ -156,7 +157,119 @@ void *client_handler(void *args) {
     close(client_fd);
     pthread_exit(NULL);
 }
+*/
 
+
+void *client_handler(void *args) {
+    
+    struct thread_info_st *thread_data = (struct thread_info_st *)args;
+    int client_fd = thread_data->client_fd;
+    int bytes_read;
+    int used_size = 0;
+    char *recv_buffer;
+
+    recv_buffer = calloc(1,  BUFFER_SIZE);
+
+    if(recv_buffer == NULL){
+        syslog(LOG_ERR, "Failed to allocate memory");
+        pthread_exit(NULL);
+    }
+
+    while((bytes_read = recv(client_fd,recv_buffer,BUFFER_SIZE,0)) > 0){
+
+        used_size += bytes_read;
+        if (strchr(recv_buffer, '\n')) break;
+
+        char * recv_buffer = realloc(recv_buffer,BUFFER_SIZE + used_size);
+            if (recv_buffer == NULL) {
+            syslog(LOG_ERR, "Realloc failed");
+            free(recv_buffer);
+            pthread_exit(NULL);
+        }
+    }
+
+    pthread_mutex_lock(&file_mutex);
+    int file_fd = open(FILE_TO_WRITE, O_RDWR | O_CREAT | O_APPEND, 0644);
+    pthread_mutex_unlock(&file_mutex);      
+    
+    
+    if (file_fd < 0) {
+        syslog(LOG_ERR, "Failed to open file: %s", strerror(errno));
+        close(client_fd);
+        pthread_exit(NULL);
+    }
+    
+    if(strncmp(recv_buffer, "AESDCHAR_IOCSEEKTO:",19) == 0){
+        unsigned int write_cmd, write_cmd_offset;
+
+        if(sscanf(recv_buffer + 19,  "%u,%u", &write_cmd, &write_cmd_offset) == 2){
+
+            struct aesd_seekto seekto_cmd = {
+                .write_cmd = write_cmd,
+                .write_cmd_offset = write_cmd_offset
+            };
+
+                pthread_mutex_lock(&file_mutex);
+
+                if(ioctl(file_fd,AESDCHAR_IOCSEEKTO, &seekto_cmd) < 0){
+                    syslog(LOG_ERR, "IOCTL command failed: %s", strerror(errno));
+                } else{
+                        syslog(LOG_INFO, "IOCTL command succeeded");
+
+                    char read_buffer[BUFFER_SIZE];
+                    ssize_t bytes_read;
+
+                    while ((bytes_read = read(file_fd, read_buffer, BUFFER_SIZE) ) > 0)
+                    {
+                        if (send(client_fd,read_buffer,bytes_read,0) < 0){
+                            syslog(LOG_ERR, "Failed to send data: %s", strerror(errno));
+                            break;
+                        }   
+                    }
+                    
+
+                }
+
+                pthread_mutex_unlock(&file_mutex);      
+        } else {
+                syslog(LOG_ERR, "Failed to parse IOCTL command");
+            }
+
+    } else{
+
+            pthread_mutex_lock(&file_mutex);
+
+            if (write(file_fd, recv_buffer, used_size) < 0) 
+            {
+            syslog(LOG_ERR, "Write to file failed: %s", strerror(errno));
+            }
+
+        lseek(file_fd, 0, SEEK_SET);
+
+        char send_buffer[BUFFER_SIZE];
+        ssize_t bytes_to_send;
+        while ((bytes_to_send = read(file_fd, send_buffer, BUFFER_SIZE)) > 0) 
+        {
+            if (send(client_fd, send_buffer, bytes_to_send, 0) < 0) 
+                {
+                    syslog(LOG_ERR, "Send error: %s", strerror(errno));
+                }
+        }
+
+        lseek(file_fd, 0, SEEK_END);
+        pthread_mutex_unlock(&file_mutex);
+
+    }
+    
+    
+    pthread_mutex_lock(&file_mutex);
+    close(file_fd);
+    pthread_mutex_unlock(&file_mutex);
+
+    
+    close(client_fd);
+    pthread_exit(NULL);
+}
 
 #ifndef USE_AESD_CHAR_DEVICE
 // Thread function to periodically append timestamp
